@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
-  Image,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
@@ -25,50 +24,19 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
-      
+
       <View style={styles.content}>
-        {/* Logo/Header Section */}
+        {/* Logo / Header Section */}
         <View style={styles.header}>
           <View style={styles.logoContainer}>
             <IconSymbol name="leaf.fill" size={80} color="#2E7D32" />
           </View>
+
           <Text style={styles.title}>Supervisor App</Text>
+
           <Text style={styles.subtitle}>
             Manage your agricultural operations with ease
           </Text>
-        </View>
-
-        {/* Features Section */}
-        <View style={styles.featuresContainer}>
-          <View style={styles.feature}>
-            <View style={styles.featureIcon}>
-              <IconSymbol name="checkmark.circle.fill" size={32} color="#2E7D32" />
-            </View>
-            <View style={styles.featureText}>
-              <Text style={styles.featureTitle}>Task Management</Text>
-              <Text style={styles.featureDescription}>Assign and track work efficiently</Text>
-            </View>
-          </View>
-
-          <View style={styles.feature}>
-            <View style={styles.featureIcon}>
-              <IconSymbol name="person.2.fill" size={32} color="#1976D2" />
-            </View>
-            <View style={styles.featureText}>
-              <Text style={styles.featureTitle}>Worker Coordination</Text>
-              <Text style={styles.featureDescription}>Manage your team seamlessly</Text>
-            </View>
-          </View>
-
-          <View style={styles.feature}>
-            <View style={styles.featureIcon}>
-              <IconSymbol name="wrench.and.screwdriver.fill" size={32} color="#FF9800" />
-            </View>
-            <View style={styles.featureText}>
-              <Text style={styles.featureTitle}>Asset Monitoring</Text>
-              <Text style={styles.featureDescription}>Keep track of equipment and maintenance</Text>
-            </View>
-          </View>
         </View>
 
         {/* Action Buttons */}
@@ -78,7 +46,7 @@ export default function HomeScreen() {
             onPress={handleLogin}
             activeOpacity={0.8}
           >
-            <Text style={styles.loginButtonText}>Sign In</Text>
+            <Text style={styles.loginButtonText}>Log In</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -112,11 +80,10 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 24,
     paddingVertical: 40,
-    justifyContent: 'space-between',
   },
   header: {
     alignItems: 'center',
-    paddingTop: 60,
+    paddingTop: 80,
   },
   logoContainer: {
     width: 120,
@@ -141,42 +108,8 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     paddingHorizontal: 20,
   },
-  featuresContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingVertical: 40,
-  },
-  feature: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-    paddingHorizontal: 16,
-  },
-  featureIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#F5F5F5',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  featureText: {
-    flex: 1,
-  },
-  featureTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333333',
-    marginBottom: 4,
-  },
-  featureDescription: {
-    fontSize: 14,
-    color: '#666666',
-    lineHeight: 20,
-  },
   actionContainer: {
-    paddingBottom: 20,
+    marginTop: 40, // moved buttons upward
   },
   loginButton: {
     height: 52,

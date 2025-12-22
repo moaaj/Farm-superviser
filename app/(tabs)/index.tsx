@@ -13,7 +13,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useRouter } from "expo-router";
 import { AIRecommendationWidget } from "@/components/AIRecommendationWidget";
-// import { LinearGradient } from 'expo-linear-gradient';
 
 const { width } = Dimensions.get("window");
 
@@ -32,7 +31,7 @@ export default function DashboardScreen() {
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
 
-      {/* Header with Beautiful Background */}
+      {/* Header */}
       <View style={styles.headerGradient}>
         <View style={styles.header}>
           <View style={styles.headerContent}>
@@ -56,10 +55,7 @@ export default function DashboardScreen() {
         </View>
       </View>
 
-      <ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Weather Widget */}
         <View style={styles.weatherContainer}>
           <View style={styles.weatherCard}>
@@ -205,11 +201,6 @@ function StatCard({
   gradient: string[];
   trend: string;
 }) {
-  const getStatColor = (index: number) => {
-    const colors = ["#4CAF50", "#2196F3", "#FF9800", "#9C27B0"];
-    return colors[index % colors.length];
-  };
-
   return (
     <TouchableOpacity
       style={[styles.statCard, { backgroundColor: gradient[0] }]}
@@ -271,9 +262,7 @@ function ActivityItem({
 }) {
   return (
     <TouchableOpacity style={styles.activityItem} activeOpacity={0.7}>
-      <View
-        style={[styles.activityIcon, { backgroundColor: iconColor + "15" }]}
-      >
+      <View style={[styles.activityIcon, { backgroundColor: iconColor + "15" }]}>
         <IconSymbol name={icon} size={22} color={iconColor} />
       </View>
       <View style={styles.activityContent}>
@@ -379,10 +368,7 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: "#1976D2",
     shadowColor: "#000000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 6,
@@ -442,10 +428,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     shadowColor: "#000000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 6,
@@ -498,10 +481,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     shadowColor: "#000000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 6,
@@ -532,10 +512,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     shadowColor: "#000000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,

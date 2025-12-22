@@ -1,723 +1,338 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
-  ScrollView,
+  TextInput,
   TouchableOpacity,
-  RefreshControl,
+  ScrollView,
   Alert,
-  Dimensions,
-  ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { useRouter } from 'expo-router';
-import { aiRecommendationService, Recommendation, AIAnalytics } from '@/services/aiRecommendations';
 
-const { width } = Dimensions.get('window');
+/* ---------- Expanded Mock Data ---------- */
+const TASKS = [
+  { id: 't1', name: 'Harvesting' },
+  { id: 't2', name: 'Planting' },
+  { id: 't3', name: 'Maintenance' },
+  { id: 't4', name: 'Pruning' },
+  { id: 't5', name: 'Manuring' },
+  { id: 't6', name: 'Spraying' },
+  { id: 't7', name: 'Weeding' },
+  { id: 't8', name: 'Pest and Disease' },
+  { id: 't9', name: 'Mechanisation Fleet' },
+];
 
-export default function AIRecommendationsScreen() {
-  const router = useRouter();
-  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
-  const [analytics, setAnalytics] = useState<AIAnalytics | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [selectedFilter, setSelectedFilter] = useState('All');
-  const [generating, setGenerating] = useState(false);
+const WORKERS = [
+  { id: 'w1', name: 'Ahmad', skill: 'Harvesting', suitabilityScore: 92, availability: 'Available', experience: 5, currentTasks: ['Harvesting section A'] },
+  { id: 'w2', name: 'Faiz', skill: 'Harvesting', suitabilityScore: 84, availability: 'Available', experience: 3, currentTasks: ['Harvesting section B'] },
+  { id: 'w3', name: 'Aiman', skill: 'Planting', suitabilityScore: 80, availability: 'Busy', experience: 4, currentTasks: ['Planting section C'] },
+  { id: 'w4', name: 'Siti', skill: 'Harvesting', suitabilityScore: 75, availability: 'Available', experience: 2, currentTasks: ['Assisting Harvesting section B'] },
+  { id: 'w5', name: 'Hafiz', skill: 'Harvesting', suitabilityScore: 78, availability: 'Busy', experience: 3, currentTasks: ['Harvesting section C'] },
+  { id: 'w6', name: 'Maya', skill: 'Pruning', suitabilityScore: 88, availability: 'Available', experience: 4, currentTasks: ['Pruning section A'] },
+  { id: 'w7', name: 'Zul', skill: 'Manuring', suitabilityScore: 85, availability: 'Available', experience: 3, currentTasks: ['Manuring section B'] },
+  { id: 'w8', name: 'Lina', skill: 'Spraying', suitabilityScore: 90, availability: 'Busy', experience: 5, currentTasks: ['Spraying section C'] },
+  { id: 'w9', name: 'Imran', skill: 'Weeding', suitabilityScore: 82, availability: 'Available', experience: 3, currentTasks: ['Weeding section D'] },
+  { id: 'w10', name: 'Fauzi', skill: 'Pest and Disease', suitabilityScore: 87, availability: 'Available', experience: 6, currentTasks: ['Pest inspection section A'] },
+  { id: 'w11', name: 'Hana', skill: 'Mechanisation Fleet', suitabilityScore: 91, availability: 'Busy', experience: 7, currentTasks: ['Tractor maintenance'] },
+];
 
-  const filters = ['All', 'High Priority', 'Task Assignment', 'Maintenance', 'Optimization'];
+/* ------------------- Main Screen ------------------- */
+export default function AssignTaskScreen() {
+  const [search, setSearch] = useState('');
+  const [selectedTask, setSelectedTask] = useState<any>(null);
+  const [selectedWorkers, setSelectedWorkers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  /* Filter tasks based on search (startsWith) */
+  const filteredTasks =
+    search.trim().length === 0
+      ? []
+      : TASKS.filter(task =>
+          task.name.toLowerCase().startsWith(search.toLowerCase())
+        );
 
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      const [recsData, analyticsData] = await Promise.all([
-        aiRecommendationService.getRecommendations(),
-        aiRecommendationService.getAnalytics()
-      ]);
-      setRecommendations(recsData);
-      setAnalytics(analyticsData);
-    } catch (error) {
-      Alert.alert('Error', 'Failed to load AI recommendations');
-    } finally {
-      setLoading(false);
+  const recommendedWorkers = selectedTask
+    ? WORKERS.filter(w => w.skill === selectedTask.name).sort(
+        (a, b) => b.suitabilityScore - a.suitabilityScore
+      )
+    : [];
+
+  const toggleWorkerSelection = (worker: any) => {
+    if (!selectedWorkers.find(w => w.id === worker.id)) {
+      setSelectedWorkers([...selectedWorkers, { ...worker, task: selectedTask.name }]);
     }
   };
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await loadData();
-    setRefreshing(false);
+  const removeWorker = (workerId: string) => {
+    setSelectedWorkers(selectedWorkers.filter(w => w.id !== workerId));
   };
 
-  const generateNewRecommendations = async () => {
-    try {
-      setGenerating(true);
-      const newRecs = await aiRecommendationService.generateNewRecommendations();
-      await loadData(); // Reload all data
-      Alert.alert(
-        'AI Analysis Complete',
-        `Generated ${newRecs.length} new recommendation${newRecs.length !== 1 ? 's' : ''} based on latest data patterns.`
-      );
-    } catch (error) {
-      Alert.alert('Error', 'Failed to generate new recommendations');
-    } finally {
-      setGenerating(false);
+  const groupedWorkers = Object.entries(
+    selectedWorkers.reduce((acc: Record<string, any[]>, worker) => {
+      if (!acc[worker.task]) acc[worker.task] = [];
+      acc[worker.task].push(worker);
+      return acc;
+    }, {} as Record<string, any[]>)
+  ) as [string, any[]][]; // TypeScript fix
+
+  const assignTasks = () => {
+    if (selectedWorkers.length === 0) {
+      Alert.alert('No workers selected', 'Please select at least one worker.');
+      return;
     }
+    Alert.alert('Success', 'Workers assigned successfully!');
+    setSelectedWorkers([]);
   };
-
-  const handleImplement = async (recommendation: Recommendation) => {
-    Alert.alert(
-      'Implement Recommendation',
-      `Are you sure you want to implement this recommendation?\n\n"${recommendation.title}"`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Implement',
-          onPress: async () => {
-            try {
-              await aiRecommendationService.implementRecommendation(recommendation.id);
-              Alert.alert('Success', 'Recommendation implemented successfully!');
-              await loadData();
-            } catch (error) {
-              Alert.alert('Error', 'Failed to implement recommendation');
-            }
-          }
-        }
-      ]
-    );
-  };
-
-  const handleDismiss = async (recommendation: Recommendation) => {
-    Alert.alert(
-      'Dismiss Recommendation',
-      'Are you sure you want to dismiss this recommendation?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Dismiss',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await aiRecommendationService.dismissRecommendation(recommendation.id);
-              await loadData();
-            } catch (error) {
-              Alert.alert('Error', 'Failed to dismiss recommendation');
-            }
-          }
-        }
-      ]
-    );
-  };
-
-  const getFilteredRecommendations = () => {
-    switch (selectedFilter) {
-      case 'High Priority':
-        return recommendations.filter(rec => rec.priority === 'high');
-      case 'Task Assignment':
-        return recommendations.filter(rec => rec.type === 'task_assignment');
-      case 'Maintenance':
-        return recommendations.filter(rec => rec.type === 'maintenance');
-      case 'Optimization':
-        return recommendations.filter(rec => rec.type === 'optimization');
-      default:
-        return recommendations;
-    }
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high': return '#F44336';
-      case 'medium': return '#FF9800';
-      case 'low': return '#4CAF50';
-      default: return '#666666';
-    }
-  };
-
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case 'task_assignment': return 'person.fill';
-      case 'maintenance': return 'house.fill';
-      case 'optimization': return 'gear.fill';
-      case 'alert': return 'house.fill';
-      case 'productivity': return 'chart.bar.fill';
-      default: return 'house.fill';
-    }
-  };
-
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case 'task_assignment': return '#2196F3';
-      case 'maintenance': return '#FF9800';
-      case 'optimization': return '#4CAF50';
-      case 'alert': return '#F44336';
-      case 'productivity': return '#9C27B0';
-      default: return '#666666';
-    }
-  };
-
-  const renderRecommendationCard = (recommendation: Recommendation) => (
-    <View key={recommendation.id} style={styles.recommendationCard}>
-      {/* Header */}
-      <View style={styles.cardHeader}>
-        <View style={styles.cardHeaderLeft}>
-          <View style={[styles.typeIcon, { backgroundColor: getTypeColor(recommendation.type) + '20' }]}>
-            <IconSymbol 
-              name={getTypeIcon(recommendation.type)} 
-              size={20} 
-              color={getTypeColor(recommendation.type)} 
-            />
-          </View>
-          <View style={styles.headerInfo}>
-            <Text style={styles.cardTitle} numberOfLines={2}>{recommendation.title}</Text>
-            <Text style={styles.cardCategory}>{recommendation.category}</Text>
-          </View>
-        </View>
-        <View style={[styles.priorityBadge, { backgroundColor: getPriorityColor(recommendation.priority) }]}>
-          <Text style={styles.priorityText}>{recommendation.priority.toUpperCase()}</Text>
-        </View>
-      </View>
-
-      {/* Description */}
-      <Text style={styles.cardDescription}>{recommendation.description}</Text>
-
-      {/* Metrics */}
-      <View style={styles.metricsRow}>
-        <View style={styles.metric}>
-          <Text style={styles.metricLabel}>Confidence</Text>
-          <View style={styles.confidenceBar}>
-            <View 
-              style={[
-                styles.confidenceFill, 
-                { 
-                  width: `${recommendation.confidence}%`,
-                  backgroundColor: recommendation.confidence >= 80 ? '#4CAF50' : 
-                                  recommendation.confidence >= 60 ? '#FF9800' : '#F44336'
-                }
-              ]} 
-            />
-          </View>
-          <Text style={styles.metricValue}>{recommendation.confidence}%</Text>
-        </View>
-        <View style={styles.metric}>
-          <Text style={styles.metricLabel}>Impact</Text>
-          <Text style={[styles.metricValue, { color: getTypeColor(recommendation.type) }]}>
-            {recommendation.impact.toUpperCase()}
-          </Text>
-        </View>
-      </View>
-
-      {/* Benefits */}
-      {(recommendation.estimatedSavings || recommendation.timeToImplement) && (
-        <View style={styles.benefitsRow}>
-          {recommendation.estimatedSavings && (
-            <View style={styles.benefit}>
-              <IconSymbol name="house.fill" size={14} color="#4CAF50" />
-              <Text style={styles.benefitText}>Save: {recommendation.estimatedSavings}</Text>
-            </View>
-          )}
-          {recommendation.timeToImplement && (
-            <View style={styles.benefit}>
-              <IconSymbol name="house.fill" size={14} color="#2196F3" />
-              <Text style={styles.benefitText}>Time: {recommendation.timeToImplement}</Text>
-            </View>
-          )}
-        </View>
-      )}
-
-      {/* AI Insight */}
-      <View style={styles.aiInsightContainer}>
-        <View style={styles.aiInsightHeader}>
-          <IconSymbol name="sparkles" size={16} color="#9C27B0" />
-          <Text style={styles.aiInsightLabel}>AI Insight</Text>
-        </View>
-        <Text style={styles.aiInsightText}>{recommendation.aiInsight}</Text>
-      </View>
-
-      {/* Actions */}
-      {recommendation.actionable && (
-        <View style={styles.actionsRow}>
-          <TouchableOpacity
-            style={styles.dismissButton}
-            onPress={() => handleDismiss(recommendation)}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.dismissButtonText}>Dismiss</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.implementButton}
-            onPress={() => handleImplement(recommendation)}
-            activeOpacity={0.8}
-          >
-            <IconSymbol name="house.fill" size={16} color="#FFFFFF" />
-            <Text style={styles.implementButtonText}>Implement</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-    </View>
-  );
-
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <StatusBar style="dark" />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#9C27B0" />
-          <Text style={styles.loadingText}>AI is analyzing your data...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <StatusBar style="dark" />
-      
+
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-          activeOpacity={0.7}
-        >
-          <IconSymbol name="chevron.left" size={24} color="#9C27B0" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>AI Recommendations</Text>
-        <View style={styles.headerActions}>
-          <TouchableOpacity
-            style={styles.chatButton}
-            onPress={() => router.push('/ai-chat')}
-            activeOpacity={0.8}
-          >
-            <IconSymbol name="wand.and.stars" size={18} color="#9C27B0" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.generateButton, generating && styles.generateButtonDisabled]}
-            onPress={generateNewRecommendations}
-            disabled={generating}
-            activeOpacity={0.8}
-          >
-            {generating ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <IconSymbol name="house.fill" size={20} color="#FFFFFF" />
-            )}
-          </TouchableOpacity>
+      <Text style={styles.title}>Assign Task</Text>
+      <Text style={styles.subtitle}>
+        Search task → choose the best workers for the task
+      </Text>
+
+      {/* Task Search */}
+      <TextInput
+        style={styles.input}
+        placeholder="Search task (e.g. Harvesting)"
+        value={search}
+        onChangeText={text => {
+          setSearch(text);
+          setSelectedTask(null);
+        }}
+      />
+
+      {/* Task Results */}
+      {filteredTasks.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Tasks</Text>
+          {filteredTasks.map(task => (
+            <TouchableOpacity
+              key={task.id}
+              style={[
+                styles.card,
+                selectedTask?.id === task.id && styles.selectedCard,
+              ]}
+              onPress={() => setSelectedTask(task)}
+            >
+              <Text style={styles.cardTitle}>{task.name}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
-      </View>
+      )}
 
-      <ScrollView 
-        style={styles.scrollView} 
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
-        {/* Analytics Summary */}
-        {analytics && (
-          <View style={styles.analyticsContainer}>
-            <View style={styles.analyticsHeader}>
-              <IconSymbol name="chart.bar.fill" size={24} color="#9C27B0" />
-              <Text style={styles.analyticsTitle}>AI Performance</Text>
-            </View>
-            <View style={styles.analyticsGrid}>
-              <View style={styles.analyticsCard}>
-                <Text style={styles.analyticsValue}>{analytics.totalRecommendations}</Text>
-                <Text style={styles.analyticsLabel}>Total Recommendations</Text>
-              </View>
-              <View style={styles.analyticsCard}>
-                <Text style={styles.analyticsValue}>{analytics.implementedRecommendations}</Text>
-                <Text style={styles.analyticsLabel}>Implemented</Text>
-              </View>
-              <View style={styles.analyticsCard}>
-                <Text style={styles.analyticsValue}>{analytics.potentialSavings}</Text>
-                <Text style={styles.analyticsLabel}>Potential Savings</Text>
-              </View>
-              <View style={styles.analyticsCard}>
-                <Text style={styles.analyticsValue}>{analytics.efficiencyGain}%</Text>
-                <Text style={styles.analyticsLabel}>Efficiency Gain</Text>
-              </View>
-            </View>
-          </View>
-        )}
+      {/* Recommended Workers */}
+      {selectedTask && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>
+            Recommended Workers for "{selectedTask.name}"
+          </Text>
 
-        {/* Filter Tabs */}
-        <View style={styles.filterContainer}>
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filterScroll}
-          >
-            {filters.map((filter) => (
-              <TouchableOpacity
-                key={filter}
-                style={[
-                  styles.filterTab,
-                  selectedFilter === filter && styles.filterTabActive
-                ]}
-                onPress={() => setSelectedFilter(filter)}
-                activeOpacity={0.7}
-              >
-                <Text style={[
-                  styles.filterText,
-                  selectedFilter === filter && styles.filterTextActive
-                ]}>
-                  {filter}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
+          {recommendedWorkers.map(worker => (
+            <TouchableOpacity
+              key={worker.id}
+              style={[
+                styles.workerCard,
+                selectedWorkers.find(w => w.id === worker.id) &&
+                  styles.selectedCard,
+              ]}
+              onPress={() => toggleWorkerSelection(worker)}
+            >
+              <View style={styles.rowBetween}>
+                <Text style={styles.workerName}>{worker.name}</Text>
+                <Text style={styles.score}>{worker.suitabilityScore}%</Text>
+              </View>
 
-        {/* Recommendations List */}
-        <View style={styles.recommendationsContainer}>
-          {getFilteredRecommendations().length > 0 ? (
-            getFilteredRecommendations().map(renderRecommendationCard)
-          ) : (
-            <View style={styles.emptyContainer}>
-              <IconSymbol name="house.fill" size={64} color="#CCCCCC" />
-              <Text style={styles.emptyTitle}>No recommendations found</Text>
-              <Text style={styles.emptySubtitle}>
-                AI is continuously analyzing your data to provide intelligent insights
+              <Text style={styles.smallText}>Skill: {worker.skill}</Text>
+              <Text style={styles.smallText}>
+                Availability: {worker.availability}
               </Text>
-            </View>
-          )}
+              <Text style={styles.smallText}>
+                Experience: {worker.experience} years
+              </Text>
+              <Text style={styles.smallText}>
+                Current Tasks: {worker.currentTasks.join(', ')}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
+      )}
 
-        <View style={styles.bottomSpacing} />
-      </ScrollView>
-    </SafeAreaView>
+      {/* Selected Workers Summary */}
+      {selectedWorkers.length > 0 && (
+        <View style={styles.assignmentSection}>
+          {groupedWorkers.map(([taskName, workers]) => (
+            <View key={taskName} style={{ marginBottom: 20 }}>
+              <Text style={styles.taskTitle}>{taskName.toUpperCase()}</Text>
+              {workers.map(worker => (
+                <View key={worker.id} style={styles.workerSummaryCard}>
+                  <View style={styles.rowBetween}>
+                    <Text style={styles.workerSummaryName}>{worker.name}</Text>
+                    <TouchableOpacity
+                      style={styles.removeButton}
+                      onPress={() => removeWorker(worker.id)}
+                    >
+                      <Text style={styles.removeButtonText}>Remove</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={styles.workerSummaryText}>
+                    Availability: {worker.availability}
+                  </Text>
+                  <Text style={styles.workerSummaryText}>
+                    Experience: {worker.experience} years
+                  </Text>
+                </View>
+              ))}
+            </View>
+          ))}
+        </View>
+      )}
+
+      {/* Assign Task Button */}
+      {selectedWorkers.length > 0 && (
+        <TouchableOpacity
+          style={[styles.assignButton, loading && styles.disabledButton]}
+          onPress={assignTasks}
+        >
+          <Text style={styles.assignButtonText}>Assign Task</Text>
+        </TouchableOpacity>
+      )}
+    </ScrollView>
   );
 }
 
+/* ------------------- Styles ------------------- */
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8FAFE',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 40,
-  },
-  loadingText: {
-    fontSize: 16,
-    color: '#666666',
-    marginTop: 16,
-    textAlign: 'center',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F3E5F5',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1A237E',
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  chatButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#F3E5F5',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  generateButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#9C27B0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  generateButtonDisabled: {
-    backgroundColor: '#CCCCCC',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  analyticsContainer: {
-    backgroundColor: '#FFFFFF',
-    margin: 24,
-    borderRadius: 16,
     padding: 20,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
   },
-  analyticsHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  analyticsTitle: {
-    fontSize: 18,
+  title: {
+    fontSize: 26,
     fontWeight: 'bold',
     color: '#1A237E',
-    marginLeft: 8,
   },
-  analyticsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  analyticsCard: {
-    width: (width - 88) / 2,
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  analyticsValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#9C27B0',
-    marginBottom: 4,
-  },
-  analyticsLabel: {
-    fontSize: 12,
-    color: '#666666',
-    textAlign: 'center',
-  },
-  filterContainer: {
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  filterScroll: {
-    paddingHorizontal: 24,
-  },
-  filterTab: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    marginRight: 12,
-    borderRadius: 20,
-    backgroundColor: '#F5F5F5',
-  },
-  filterTabActive: {
-    backgroundColor: '#9C27B0',
-  },
-  filterText: {
+  subtitle: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#666666',
-  },
-  filterTextActive: {
-    color: '#FFFFFF',
-  },
-  recommendationsContainer: {
-    padding: 24,
-  },
-  recommendationCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
+    color: '#666',
     marginBottom: 16,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
   },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
+  input: {
+    backgroundColor: '#FFF',
+    borderWidth: 1,
+    borderColor: '#DDD',
+    borderRadius: 10,
+    padding: 14,
+    marginBottom: 16,
   },
-  cardHeaderLeft: {
-    flexDirection: 'row',
-    flex: 1,
-    marginRight: 12,
+  section: {
+    marginTop: 16,
   },
-  typeIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    color: '#333',
   },
-  headerInfo: {
-    flex: 1,
+  card: {
+    backgroundColor: '#FFF',
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#DDD',
+    marginBottom: 8,
+  },
+  selectedCard: {
+    borderColor: '#9C27B0',
+    backgroundColor: '#F3E5F5',
   },
   cardTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1A237E',
-    marginBottom: 4,
+    fontWeight: '600',
   },
-  cardCategory: {
-    fontSize: 12,
-    color: '#666666',
-  },
-  priorityBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+  workerCard: {
+    backgroundColor: '#FFF',
+    padding: 14,
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#DDD',
+    marginBottom: 10,
   },
-  priorityText: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  cardDescription: {
-    fontSize: 14,
-    color: '#333333',
-    lineHeight: 20,
-    marginBottom: 16,
-  },
-  metricsRow: {
+  rowBetween: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  metric: {
-    flex: 1,
-    marginRight: 16,
-  },
-  metricLabel: {
-    fontSize: 12,
-    color: '#666666',
-    marginBottom: 4,
-  },
-  confidenceBar: {
-    height: 4,
-    backgroundColor: '#F0F0F0',
-    borderRadius: 2,
-    marginBottom: 4,
-  },
-  confidenceFill: {
-    height: '100%',
-    borderRadius: 2,
-  },
-  metricValue: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#1A237E',
-  },
-  benefitsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 16,
-    gap: 12,
-  },
-  benefit: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8F9FA',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  benefitText: {
-    fontSize: 12,
-    color: '#333333',
-    marginLeft: 4,
-    fontWeight: '500',
-  },
-  aiInsightContainer: {
-    backgroundColor: '#F3E5F5',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 16,
-  },
-  aiInsightHeader: {
-    flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 6,
   },
-  aiInsightLabel: {
-    fontSize: 12,
+  workerName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  score: {
     fontWeight: 'bold',
     color: '#9C27B0',
-    marginLeft: 4,
   },
-  aiInsightText: {
-    fontSize: 12,
-    color: '#4A148C',
-    lineHeight: 16,
+  smallText: {
+    fontSize: 13,
+    marginTop: 2,
+    color: '#555',
   },
-  actionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
+  assignmentSection: {
+    marginTop: 30,
   },
-  dismissButton: {
-    flex: 1,
-    height: 40,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  dismissButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#666666',
-  },
-  implementButton: {
-    flex: 2,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: '#9C27B0',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 6,
-  },
-  implementButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  emptyTitle: {
-    fontSize: 20,
+  taskTitle: {
+    fontSize: 24,
     fontWeight: 'bold',
-    color: '#666666',
-    marginTop: 16,
-    marginBottom: 8,
+    color: '#1A237E',
+    marginBottom: 12,
   },
-  emptySubtitle: {
+  workerSummaryCard: {
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#DDD',
+  },
+  workerSummaryName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  workerSummaryText: {
     fontSize: 14,
-    color: '#999999',
-    textAlign: 'center',
-    paddingHorizontal: 40,
+    color: '#555',
+    marginTop: 4,
   },
-  bottomSpacing: {
-    height: 32,
+  removeButton: {
+    backgroundColor: '#E53935',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+  },
+  removeButtonText: {
+    color: '#FFF',
+    fontWeight: 'bold',
+    fontSize: 12,
+  },
+  assignButton: {
+    backgroundColor: '#1A237E',
+    paddingVertical: 14,
+    borderRadius: 12,
+    marginBottom: 30,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  assignButtonText: {
+    color: '#FFF',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  disabledButton: {
+    backgroundColor: '#999',
   },
 });
