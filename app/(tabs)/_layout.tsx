@@ -6,7 +6,7 @@ import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { AIFloatingButton } from '@/components/AIFloatingButton';
+import { AIChatButton } from '@/components/AIChatButton';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -68,8 +68,8 @@ export default function TabLayout() {
         />
       </Tabs>
       
-      {/* AI Floating Button */}
-      <AIFloatingButton hasRecommendations={true} recommendationCount={5} />
+      {/* AI Chat Floating Button */}
+      <AIChatButton showTooltip={true} />
     </View>
   );
 }
